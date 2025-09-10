@@ -1,0 +1,20 @@
+modules:
+  jira:projectPage:
+    - key: jira-project-assistant-project-page
+      resource: main
+      title: 🚀 Team Assistant
+
+resources:
+  - key: main
+    path: static/hello-world/build
+
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - read:jira-user
+
+app:
+  runtime:
+    name: nodejs20.x
+  id: ari:cloud:ecosystem::app/3038b6d6-2c7d-4f50-9f99-1b9023168086
