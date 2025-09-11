@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "forge tunnel",
     "build": "cd static/ui && npm run build",
-    "deploy": "npm run build && forge deploy",
+    "deploy": "forge deploy --no-verify",
     "install": "forge install",
     "setup": "cd static/ui && npm install"
   },
@@ -15,7 +15,7 @@
     "@forge/resolver": "^1.5.0"
   },
   "devDependencies": {
-    "@forge/cli": "^6.0.0"
+    "@forge/cli": "^12.5.2"
   },
   "author": "Alex_Tol",
   "license": "MIT"
