@@ -97,6 +97,25 @@ export const App = () => {
     }
   };
 
+  const handleFixPriority = async (issueKey) => {
+    try {
+      console.log(`⬆️ Повышение приоритета для ${issueKey}`);
+      // Повышаем приоритет до Medium (id: '3')
+      const response = await JiraAPI.updateIssuePriority(issueKey, '3');
+      
+      if (response.success) {
+        console.log('✅ Приоритет повышен успешно');
+        // Обновляем локальные данные
+        await loadData();
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка повышения приоритета:', error);
+      alert(`Ошибка: ${error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -124,7 +143,8 @@ export const App = () => {
   const unassignedIssues = issues.filter(issue => !issue.assignee);
   const problemIssues = issues.filter(issue => 
     !issue.assignee || 
-    (issue.priority.name === 'Low' && issue.duedate && new Date(issue.duedate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
+    ((issue.priority.name === 'Low' || issue.priority.name === 'Lowest')
+     && issue.duedate && new Date(issue.duedate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
   );
 
   return (
@@ -185,8 +205,8 @@ export const App = () => {
           <tbody>
             {issues.map(issue => {
               const isUnassigned = !issue.assignee;
-              const isLowPriorityWithDeadline = issue.priority.name === 'Low' && 
-                issue.duedate && 
+              const isLowPriority = issue.priority.name === 'Low' || issue.priority.name === 'Lowest';
+              const isLowPriorityWithDeadline = isLowPriority && issue.duedate && 
                 new Date(issue.duedate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
               
               return (
@@ -207,23 +227,41 @@ export const App = () => {
                   </td>
                   <td style={{ padding: '10px', border: '1px solid #ddd' }}>{issue.priority.name}</td>
                   <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                    {isUnassigned && (
-                      <select 
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            handleAssignIssue(issue.key, e.target.value);
-                          }
-                        }}
-                        style={{ padding: '4px', fontSize: '12px' }}
-                      >
-                        <option value="">Назначить...</option>
-                        {users.filter(u => u.active).map(user => (
-                          <option key={user.accountId} value={user.accountId}>
-                            {user.displayName}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {isUnassigned && (
+                        <select 
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleAssignIssue(issue.key, e.target.value);
+                            }
+                          }}
+                          style={{ padding: '4px', fontSize: '12px' }}
+                        >
+                          <option value="">Назначить...</option>
+                          {users.filter(u => u.active).map(user => (
+                            <option key={user.accountId} value={user.accountId}>
+                              {user.displayName}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {isLowPriorityWithDeadline && (
+                        <button
+                          onClick={() => handleFixPriority(issue.key)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            backgroundColor: '#ffc107',
+                            color: 'black',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ⬆️ Fix Priority
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

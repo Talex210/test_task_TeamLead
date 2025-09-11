@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "forge tunnel",
     "build": "cd static/ui && npm run build",
-    "deploy": "npm run build && forge deploy --no-verify",
+    "deploy": "npm run build && forge deploy",
     "install": "forge install",
     "setup": "cd static/ui && npm install"
   },

@@ -113,6 +113,32 @@ function getMockData(functionName, payload) {
                         duedate: null,
                         created: '2024-01-10T14:00:00.000Z',
                         updated: '2024-01-18T16:45:00.000Z'
+                    },
+                    {
+                        id: '10004',
+                        key: 'SCRUM-4',
+                        summary: 'Исправить мелкие баги в UI',
+                        status: 'To Do',
+                        assignee: {
+                            accountId: 'user3',
+                            displayName: 'Алексей Сидоров',
+                            avatarUrl: 'https://via.placeholder.com/24'
+                        },
+                        priority: { name: 'Lowest', id: '5' },
+                        duedate: '2024-12-20',
+                        created: '2024-01-17T11:00:00.000Z',
+                        updated: '2024-01-17T11:00:00.000Z'
+                    },
+                    {
+                        id: '10005',
+                        key: 'SCRUM-5',
+                        summary: 'Обновить документацию',
+                        status: 'To Do',
+                        assignee: null,
+                        priority: { name: 'Lowest', id: '5' },
+                        duedate: '2024-12-22',
+                        created: '2024-01-18T09:00:00.000Z',
+                        updated: '2024-01-18T09:00:00.000Z'
                     }
                 ],
                 projectKey: currentProjectKey || 'SCRUM'
@@ -162,9 +188,10 @@ function getMockData(functionName, payload) {
             return {
                 success: true,
                 results: [
-                    { issueKey: 'SCRUM-2', assignedTo: 'Иван Иванов', success: true }
+                    { issueKey: 'SCRUM-2', assignedTo: 'Иван Иванов', success: true },
+                    { issueKey: 'SCRUM-5', assignedTo: 'Мария Петрова', success: true }
                 ],
-                summary: 'Назначено 1 из 1 задач'
+                summary: 'Назначено 2 из 2 задач'
             };
             
         default:

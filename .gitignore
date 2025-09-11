@@ -6,7 +6,7 @@ yarn-error.log*
 package-lock.json
 
 # Bild
-jira-project-assistant/static/ui/build/index.js
+jira-project-assistant/static/ui/build/
 
 # Envlocal
 .env.development.local
