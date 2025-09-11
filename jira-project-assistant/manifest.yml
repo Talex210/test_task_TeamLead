@@ -1,15 +1,11 @@
 modules:
-# Модуль для страницы проекта
   jira:projectPage:
     - key: jira-project-assistant-project-page
-    # Ссылка на ресурс
       resource: main
-      # Название вкладки в Jira
       title: 🚀 Team Assistant
 
 resources:
   - key: main
-  # Путь к статическим файлам
     path: static/ui/build
 
 permissions:

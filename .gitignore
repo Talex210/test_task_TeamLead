@@ -5,10 +5,8 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 
-# Production builds
-jira-project-assistant/build
-jira-project-assistant/dist
-jira-project-assistant/static/ui/build/
+# Bild
+jira-project-assistant/static/ui/build/index.js
 
 # Envlocal
 .env.development.local
