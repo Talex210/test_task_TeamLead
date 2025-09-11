@@ -8,7 +8,7 @@ package-lock.json
 # Production builds
 jira-project-assistant/build
 jira-project-assistant/dist
-jira-project-assistant/static/hello-world/build/
+jira-project-assistant/static/ui/build/
 
 # Envlocal
 .env.development.local
