@@ -15,6 +15,7 @@ export const App = () => {
   const [showMultiFixModal, setShowMultiFixModal] = useState(false);
   const [showAutoAssignConfirm, setShowAutoAssignConfirm] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
+  const [activeTab, setActiveTab] = useState('issues'); // 'issues' или 'team'
 
   useEffect(() => {
     console.log('🚀 Jira Team Assistant загружается...');
@@ -248,76 +249,139 @@ export const App = () => {
       && issue.duedate && new Date(issue.duedate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
   );
 
+  // Функция для определения активности участника
+  const getUserActivity = (user) => {
+    const assignedCount = issues.filter(issue =>
+      issue.assignee && issue.assignee.accountId === user.accountId
+    ).length;
+    
+    // Участник активен если у него меньше 2 задач (может взять еще)
+    return assignedCount < 2;
+  };
+
+  // Получаем активных участников для назначения
+  const getActiveUsers = () => {
+    return users.filter(user => user.active && getUserActivity(user));
+  };
+
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
 
-      {/* Панель управления */}
-      <div style={{
-        marginBottom: '20px',
-        padding: '15px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '8px',
-        border: '1px solid #dee2e6'
+      {/* Навигационные вкладки */}
+      <div style={{ 
+        marginBottom: '20px', 
+        borderBottom: '2px solid #dee2e6',
+        display: 'flex',
+        gap: '0'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-          <h3>📊 Статистика проекта</h3>
-          
-          {/* Dropdown выбора проекта */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <label htmlFor="project-select" style={{ fontWeight: 'bold' }}>Проект:</label>
-            <select
-              id="project-select"
-              value={currentProject || ''}
-              onChange={(e) => handleProjectChange(e.target.value)}
-              style={{
-                padding: '6px 12px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                minWidth: '150px'
-              }}
-            >
-              {projects.map(project => (
-                <option key={project.key} value={project.key}>
-                  {project.key} - {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
-          <span>Всего задач: <strong>{issues.length}</strong></span>
-          <span>Без исполнителя: <strong style={{ color: unassignedIssues.length > 0 ? 'red' : 'green' }}>
-            {unassignedIssues.length}
-          </strong></span>
-          <span>Проблемных: <strong style={{ color: problemIssues.length > 0 ? 'orange' : 'green' }}>
-            {problemIssues.length}
-          </strong></span>
-          <span>Участников: <strong>{users.length}</strong></span>
-        </div>
-
-        {unassignedIssues.length > 0 && (
-          <button
-            onClick={() => setShowAutoAssignConfirm(true)}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            🔄 Auto-assign unassigned ({unassignedIssues.length})
-          </button>
-        )}
+        <button
+          onClick={() => setActiveTab('issues')}
+          style={{
+            padding: '12px 24px',
+            border: 'none',
+            borderBottom: activeTab === 'issues' ? '3px solid #007bff' : '3px solid transparent',
+            backgroundColor: activeTab === 'issues' ? '#f8f9fa' : 'transparent',
+            cursor: 'pointer',
+            fontWeight: activeTab === 'issues' ? 'bold' : 'normal',
+            fontSize: '16px'
+          }}
+        >
+          📋 Задачи проекта
+        </button>
+        <button
+          onClick={() => setActiveTab('team')}
+          style={{
+            padding: '12px 24px',
+            border: 'none',
+            borderBottom: activeTab === 'team' ? '3px solid #007bff' : '3px solid transparent',
+            backgroundColor: activeTab === 'team' ? '#f8f9fa' : 'transparent',
+            cursor: 'pointer',
+            fontWeight: activeTab === 'team' ? 'bold' : 'normal',
+            fontSize: '16px'
+          }}
+        >
+          👥 Team
+        </button>
       </div>
 
-      {/* Таблица задач */}
-      <div style={{ marginBottom: '20px' }}>
-        <h3>📋 Задачи проекта</h3>
+      {/* Контент вкладки "Задачи проекта" */}
+      {activeTab === 'issues' && (
+        <div>
+          {/* Панель управления - только на вкладке "Задачи проекта" */}
+          <div style={{
+            marginBottom: '20px',
+            padding: '15px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            border: '1px solid #dee2e6'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3>📊 Статистика проекта</h3>
+              
+              {/* Dropdown выбора проекта */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <label htmlFor="project-select" style={{ fontWeight: 'bold' }}>Проект:</label>
+                <select
+                  id="project-select"
+                  value={currentProject || ''}
+                  onChange={(e) => handleProjectChange(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    backgroundColor: 'white',
+                    cursor: 'pointer',
+                    minWidth: '150px'
+                  }}
+                >
+                  {projects.map(project => (
+                    <option key={project.key} value={project.key}>
+                      {project.key} - {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
+              <span>Всего задач: <strong>{issues.length}</strong></span>
+              <span>Без исполнителя: <strong style={{ color: unassignedIssues.length > 0 ? 'red' : 'green' }}>
+                {unassignedIssues.length}
+              </strong></span>
+              <span>Проблемных: <strong style={{ color: problemIssues.length > 0 ? 'orange' : 'green' }}>
+                {problemIssues.length}
+              </strong></span>
+              <span>Участников: <strong>{users.length}</strong></span>
+            </div>
+
+            {unassignedIssues.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={() => setShowAutoAssignConfirm(true)}
+                  disabled={getActiveUsers().length === 0}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: getActiveUsers().length > 0 ? '#007bff' : '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: getActiveUsers().length > 0 ? 'pointer' : 'not-allowed',
+                    opacity: getActiveUsers().length > 0 ? 1 : 0.6
+                  }}
+                >
+                  🔄 Auto-assign unassigned ({unassignedIssues.length})
+                </button>
+                {getActiveUsers().length === 0 && (
+                  <span style={{ fontSize: '12px', color: '#dc3545' }}>
+                    ⚠️ Все участники загружены (2/2 задачи)
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <h3>📋 Задачи проекта</h3>
         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ddd' }}>
           <thead>
             <tr style={{ backgroundColor: '#f8f9fa' }}>
@@ -377,36 +441,87 @@ export const App = () => {
             })}
           </tbody>
         </table>
-      </div>
-
-      {/* Команда */}
-      <div>
-        <h3>👥 Команда проекта</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
-          {users.map(user => {
-            const assignedCount = issues.filter(issue =>
-              issue.assignee && issue.assignee.accountId === user.accountId
-            ).length;
-
-            return (
-              <div key={user.accountId} style={{
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                backgroundColor: user.active ? 'white' : '#f5f5f5'
-              }}>
-                <div style={{ fontWeight: 'bold' }}>{user.displayName}</div>
-                <div style={{ fontSize: '12px', color: '#666' }}>
-                  Задач: {assignedCount}
-                </div>
-                <div style={{ fontSize: '12px', color: user.active ? 'green' : 'gray' }}>
-                  {user.active ? '✅ Активен' : '⚪ Неактивен'}
-                </div>
-              </div>
-            );
-          })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Контент вкладки "Team" */}
+      {activeTab === 'team' && (
+        <div>
+          <h3>👥 Команда проекта</h3>
+          <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#e3f2fd', borderRadius: '4px', fontSize: '14px' }}>
+            <strong>ℹ️ Логика активности:</strong> Максимум 2 задачи на участника. 
+            Участники с 2 задачами считаются неактивными и не могут получить новые задачи.
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
+            {users.map(user => {
+              const assignedCount = issues.filter(issue =>
+                issue.assignee && issue.assignee.accountId === user.accountId
+              ).length;
+              const isUserActive = getUserActivity(user);
+
+              return (
+                <div key={user.accountId} style={{
+                  padding: '15px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  backgroundColor: isUserActive ? 'white' : '#f8f9fa',
+                  borderLeft: `4px solid ${isUserActive ? '#28a745' : '#6c757d'}`
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>{user.displayName}</div>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                    📋 Назначено задач: <strong>{assignedCount} / 2</strong>
+                  </div>
+                  <div style={{ fontSize: '14px' }}>
+                    ⚡ Статус: <span style={{ 
+                      color: isUserActive ? 'green' : 'red',
+                      fontWeight: 'bold'
+                    }}>
+                      {isUserActive ? '🟢 Может взять задачи' : '🔴 Загружен (2/2)'}
+                    </span>
+                  </div>
+                  {!isUserActive && (
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#721c24', 
+                      backgroundColor: '#f8d7da', 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      marginTop: '8px' 
+                    }}>
+                      Максимальная загрузка - не может взять новые задачи
+                    </div>
+                  )}
+                  {isUserActive && assignedCount > 0 && (
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#155724', 
+                      backgroundColor: '#d4edda', 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      marginTop: '8px' 
+                    }}>
+                      Может взять еще {2 - assignedCount} {2 - assignedCount === 1 ? 'задачу' : 'задачи'}
+                    </div>
+                  )}
+                  {isUserActive && assignedCount === 0 && (
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#004085', 
+                      backgroundColor: '#cce7ff', 
+                      padding: '4px 8px', 
+                      borderRadius: '4px', 
+                      marginTop: '8px' 
+                    }}>
+                      Свободен - может взять до 2 задач
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Модальное окно для назначения исполнителя */}
       {showAssignModal && selectedIssue && (
@@ -431,28 +546,50 @@ export const App = () => {
           }}>
             <h3>👤 Назначить исполнителя</h3>
             <p><strong>Задача:</strong> {selectedIssue.key} - {selectedIssue.summary}</p>
-            <p>Выберите исполнителя:</p>
+            <p>Выберите исполнителя из активных участников:</p>
             <div style={{ marginBottom: '15px' }}>
-              {users.filter(u => u.active).map(user => (
-                <button
-                  key={user.accountId}
-                  onClick={() => handleAssignFromModal(user.accountId)}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '8px',
-                    margin: '5px 0',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  {user.displayName}
-                </button>
-              ))}
+              {getActiveUsers().length > 0 ? getActiveUsers().map(user => {
+                const assignedCount = issues.filter(issue =>
+                  issue.assignee && issue.assignee.accountId === user.accountId
+                ).length;
+                
+                return (
+                  <button
+                    key={user.accountId}
+                    onClick={() => handleAssignFromModal(user.accountId)}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '10px',
+                      margin: '5px 0',
+                      backgroundColor: '#007bff',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    <div>{user.displayName}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                      📋 Текущих задач: {assignedCount}/2 (может взять еще {2 - assignedCount})
+                    </div>
+                  </button>
+                );
+              }) : (
+                <div style={{ 
+                  padding: '15px', 
+                  backgroundColor: '#f8d7da', 
+                  border: '1px solid #f5c6cb', 
+                  borderRadius: '4px',
+                  color: '#721c24'
+                }}>
+                  <strong>⚠️ Нет доступных участников</strong>
+                  <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>
+                    Все участники уже имеют максимальную загрузку (2 задачи). Для назначения нужны участники с менее чем 2 задачами.
+                  </p>
+                </div>
+              )}
             </div>
             <button onClick={closeModals} style={{
               padding: '8px 16px',
@@ -655,9 +792,22 @@ export const App = () => {
               </ul>
             </div>
 
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
-              Исполнители будут назначены случайным образом из списка активных участников проекта.
-            </p>
+            <div style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+              <p style={{ margin: '0 0 10px 0' }}>
+                Исполнители будут назначены случайным образом из списка <strong>активных участников</strong> проекта.
+              </p>
+              <div style={{ 
+                padding: '10px', 
+                backgroundColor: '#e3f2fd', 
+                borderRadius: '4px',
+                border: '1px solid #bbdefb'
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>📊 Статистика команды:</div>
+                <div>👥 Всего участников: <strong>{users.length}</strong></div>
+                <div>🟢 Доступных участников: <strong>{getActiveUsers().length}</strong> (могут взять задачи)</div>
+                <div>🔴 Загруженных участников: <strong>{users.length - getActiveUsers().length}</strong> (2/2 задачи)</div>
+              </div>
+            </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button 

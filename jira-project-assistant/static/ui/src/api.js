@@ -139,6 +139,77 @@ function getMockData(functionName, payload) {
                         duedate: '2024-12-22',
                         created: '2024-01-18T09:00:00.000Z',
                         updated: '2024-01-18T09:00:00.000Z'
+                    },
+                    {
+                        id: '10006',
+                        key: 'SCRUM-6',
+                        summary: 'Настроить CI/CD pipeline',
+                        status: 'In Progress',
+                        assignee: {
+                            accountId: 'user1',
+                            displayName: 'Иван Иванов',
+                            avatarUrl: 'https://via.placeholder.com/24'
+                        },
+                        priority: { name: 'High', id: '2' },
+                        duedate: null,
+                        created: '2024-01-19T10:00:00.000Z',
+                        updated: '2024-01-20T11:00:00.000Z'
+                    },
+                    {
+                        id: '10007',
+                        key: 'SCRUM-7',
+                        summary: 'Добавить unit тесты',
+                        status: 'To Do',
+                        assignee: {
+                            accountId: 'user2',
+                            displayName: 'Мария Петрова',
+                            avatarUrl: 'https://via.placeholder.com/24'
+                        },
+                        priority: { name: 'Medium', id: '3' },
+                        duedate: '2024-12-30',
+                        created: '2024-01-20T09:00:00.000Z',
+                        updated: '2024-01-20T09:00:00.000Z'
+                    },
+                    {
+                        id: '10008',
+                        key: 'SCRUM-8',
+                        summary: 'Оптимизировать производительность',
+                        status: 'To Do',
+                        assignee: {
+                            accountId: 'user4',
+                            displayName: 'Елена Козлова',
+                            avatarUrl: 'https://via.placeholder.com/24'
+                        },
+                        priority: { name: 'Low', id: '4' },
+                        duedate: null,
+                        created: '2024-01-21T14:00:00.000Z',
+                        updated: '2024-01-21T14:00:00.000Z'
+                    },
+                    {
+                        id: '10010',
+                        key: 'SCRUM-10',
+                        summary: 'Вторая задача для Елены',
+                        status: 'In Progress',
+                        assignee: {
+                            accountId: 'user4',
+                            displayName: 'Елена Козлова',
+                            avatarUrl: 'https://via.placeholder.com/24'
+                        },
+                        priority: { name: 'Medium', id: '3' },
+                        duedate: null,
+                        created: '2024-01-23T10:00:00.000Z',
+                        updated: '2024-01-23T10:00:00.000Z'
+                    },
+                    {
+                        id: '10009',
+                        key: 'SCRUM-9',
+                        summary: 'Исправить критический баг',
+                        status: 'To Do',
+                        assignee: null,
+                        priority: { name: 'Highest', id: '1' },
+                        duedate: '2024-12-18',
+                        created: '2024-01-22T16:00:00.000Z',
+                        updated: '2024-01-22T16:00:00.000Z'
                     }
                 ],
                 projectKey: currentProjectKey || 'SCRUM'
@@ -168,6 +239,20 @@ function getMockData(functionName, payload) {
                         emailAddress: 'alex@example.com',
                         avatarUrl: 'https://via.placeholder.com/24',
                         active: true
+                    },
+                    {
+                        accountId: 'user4',
+                        displayName: 'Елена Козлова',
+                        emailAddress: 'elena@example.com',
+                        avatarUrl: 'https://via.placeholder.com/24',
+                        active: true
+                    },
+                    {
+                        accountId: 'user5',
+                        displayName: 'Дмитрий Новиков',
+                        emailAddress: 'dmitry@example.com',
+                        avatarUrl: 'https://via.placeholder.com/24',
+                        active: false
                     }
                 ]
             };
@@ -406,7 +491,7 @@ export const JiraAPI = {
         }
     },
 
-    // Массовое назначение задач
+    // Массовое назначение задач (с учетом активности)
     async autoAssignUnassigned() {
         try {
             if (!currentProjectKey) {
@@ -433,18 +518,39 @@ export const JiraAPI = {
                 };
             }
 
-            // 2. Получаем активных пользователей
+            // 2. Получаем всех пользователей проекта
             const users = await makeJiraRequest(`/rest/api/3/user/assignable/search?project=${currentProjectKey}&maxResults=20`);
-            const activeUsers = users.filter(user => user.active);
+            
+            // 3. Получаем все задачи проекта для подсчета активности
+            const allIssuesJql = `project = ${currentProjectKey}`;
+            const allIssuesData = await makeJiraRequest('/rest/api/3/search', {
+                method: 'POST',
+                body: JSON.stringify({
+                    jql: allIssuesJql,
+                    fields: ['assignee'],
+                    maxResults: 200
+                })
+            });
+
+            // 4. Определяем доступных пользователей (у кого меньше 2 задач)
+            const activeUsers = users.filter(user => {
+                if (!user.active) return false;
+                
+                const assignedCount = allIssuesData.issues.filter(issue => 
+                    issue.fields.assignee && issue.fields.assignee.accountId === user.accountId
+                ).length;
+                
+                return assignedCount < 2; // Доступен если меньше 2 задач
+            });
 
             if (activeUsers.length === 0) {
                 return {
                     success: false,
-                    error: 'Нет активных пользователей для назначения'
+                    error: 'Нет доступных пользователей для назначения (все имеют максимальную загрузку 2/2 задачи)'
                 };
             }
 
-            // 3. Назначаем задачи случайным пользователям
+            // 5. Назначаем задачи случайным активным пользователям
             const results = [];
             for (const issue of unassignedIssues) {
                 const randomUser = activeUsers[Math.floor(Math.random() * activeUsers.length)];
@@ -477,7 +583,7 @@ export const JiraAPI = {
             return {
                 success: true,
                 results: results,
-                summary: `Назначено ${successCount} из ${unassignedIssues.length} задач`
+                summary: `Назначено ${successCount} из ${unassignedIssues.length} задач доступным участникам`
             };
 
         } catch (error) {
