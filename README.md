@@ -26,7 +26,6 @@
 ```bash
 # Клонирование и установка
 git clone <repository>
-cd jira-project-assistant
 npm install
 
 # Установка UI зависимостей
@@ -44,7 +43,6 @@ npm run deploy
 ## 📁 Структура проекта
 
 ```
-jira-project-assistant/
 ├── 📄 manifest.yml                 # Конфигурация Forge приложения
 ├── 📄 package.json                 # Скрипты деплоя и зависимости
 ├── 📄 DEPLOY_GUIDE.md              # Подробный гид по деплою

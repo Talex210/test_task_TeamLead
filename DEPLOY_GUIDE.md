@@ -55,7 +55,6 @@ npm run clean-all
 
 ## Структура проекта для деплоя
 ```
-jira-project-assistant/
 ├── manifest.yml          # Конфигурация Forge (nodejs20.x)
 ├── package.json          # Скрипты деплоя
 └── static/ui/
