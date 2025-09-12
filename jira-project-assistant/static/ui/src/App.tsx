@@ -1,28 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { JiraAPI } from './api';
+import type { 
+  JiraIssue, 
+  JiraUser, 
+  JiraProject,
+} from './types/jira';
 
-export const App = () => {
-  const [loading, setLoading] = useState(true);
-  const [issues, setIssues] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [currentProject, setCurrentProject] = useState(null);
-  const [error, setError] = useState(null);
+export const App: React.FC = () => {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [issues, setIssues] = useState<JiraIssue[]>([]);
+  const [users, setUsers] = useState<JiraUser[]>([]);
+  const [projects, setProjects] = useState<JiraProject[]>([]);
+  const [currentProject, setCurrentProject] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Состояния для модальных окон
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [showPriorityModal, setShowPriorityModal] = useState(false);
-  const [showMultiFixModal, setShowMultiFixModal] = useState(false);
-  const [showAutoAssignConfirm, setShowAutoAssignConfirm] = useState(false);
-  const [selectedIssue, setSelectedIssue] = useState(null);
-  const [activeTab, setActiveTab] = useState('issues'); // 'issues' или 'team'
+  const [showAssignModal, setShowAssignModal] = useState<boolean>(false);
+  const [showPriorityModal, setShowPriorityModal] = useState<boolean>(false);
+  const [showMultiFixModal, setShowMultiFixModal] = useState<boolean>(false);
+  const [showAutoAssignConfirm, setShowAutoAssignConfirm] = useState<boolean>(false);
+  const [selectedIssue, setSelectedIssue] = useState<JiraIssue | null>(null);
+  const [activeTab, setActiveTab] = useState<'issues' | 'team'>('issues');
 
   useEffect(() => {
     console.log('🚀 Jira Team Assistant загружается...');
     initializeApp();
   }, []);
 
-  const initializeApp = async () => {
+  const initializeApp = async (): Promise<void> => {
     try {
       console.log('🚀 Инициализация приложения...');
 
@@ -42,18 +47,18 @@ export const App = () => {
 
     } catch (error) {
       console.error('❌ Ошибка инициализации:', error);
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'Неизвестная ошибка');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadProjects = async () => {
+  const loadProjects = async (): Promise<void> => {
     try {
       console.log('📡 Загрузка списка проектов...');
       const projectsResponse = await JiraAPI.getProjects();
 
-      if (projectsResponse.success) {
+      if (projectsResponse.success && projectsResponse.data) {
         setProjects(projectsResponse.data);
         console.log(`✅ Загружено ${projectsResponse.data.length} проектов`);
       } else {
@@ -61,11 +66,11 @@ export const App = () => {
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки проектов:', error);
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'Ошибка загрузки проектов');
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (): Promise<void> => {
     try {
       console.log('📡 Загрузка данных из Jira API...');
 
@@ -75,14 +80,14 @@ export const App = () => {
         JiraAPI.getProjectUsers()
       ]);
 
-      if (issuesResponse.success) {
+      if (issuesResponse.success && issuesResponse.data) {
         setIssues(issuesResponse.data);
         console.log(`✅ Загружено ${issuesResponse.data.length} задач из проекта ${issuesResponse.projectKey}`);
       } else {
         throw new Error(`Ошибка загрузки задач: ${issuesResponse.error}`);
       }
 
-      if (usersResponse.success) {
+      if (usersResponse.success && usersResponse.data) {
         setUsers(usersResponse.data);
         console.log(`✅ Загружено ${usersResponse.data.length} пользователей`);
       } else {
@@ -91,11 +96,11 @@ export const App = () => {
 
     } catch (error) {
       console.error('❌ Ошибка загрузки данных:', error);
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'Ошибка загрузки данных');
     }
   };
 
-  const handleAssignIssue = async (issueKey, accountId) => {
+  const handleAssignIssue = async (issueKey: string, accountId: string): Promise<void> => {
     try {
       console.log(`👤 Назначение исполнителя для ${issueKey}`);
       const response = await JiraAPI.updateIssueAssignee(issueKey, accountId);
@@ -105,15 +110,15 @@ export const App = () => {
         // Обновляем локальные данные
         await loadData();
       } else {
-        throw new Error(response.error);
+        throw new Error(response.error || 'Неизвестная ошибка');
       }
     } catch (error) {
       console.error('❌ Ошибка назначения исполнителя:', error);
-      alert(`Ошибка: ${error.message}`);
+      alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
     }
   };
 
-  const handleProjectChange = async (projectKey) => {
+  const handleProjectChange = async (projectKey: string): Promise<void> => {
     try {
       console.log(`🔄 Смена проекта на: ${projectKey}`);
       setLoading(true);
@@ -126,13 +131,13 @@ export const App = () => {
       await loadData();
     } catch (error) {
       console.error('❌ Ошибка смены проекта:', error);
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'Ошибка смены проекта');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAutoAssign = async () => {
+  const handleAutoAssign = async (): Promise<void> => {
     try {
       console.log('🔄 Массовое назначение задач...');
       const response = await JiraAPI.autoAssignUnassigned();
@@ -142,16 +147,16 @@ export const App = () => {
         setShowAutoAssignConfirm(false);
         await loadData();
       } else {
-        throw new Error(response.error);
+        throw new Error(response.error || 'Неизвестная ошибка');
       }
     } catch (error) {
       console.error('❌ Ошибка массового назначения:', error);
-      alert(`Ошибка: ${error.message}`);
+      alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
       setShowAutoAssignConfirm(false);
     }
   };
 
-  const handleFixPriority = async (issueKey, priorityId = '3') => {
+  const handleFixPriority = async (issueKey: string, priorityId: string = '3'): Promise<void> => {
     try {
       const priorityName = priorityId === '2' ? 'High' : 'Medium';
       console.log(`⬆️ Повышение приоритета для ${issueKey} до ${priorityName}`);
@@ -162,16 +167,16 @@ export const App = () => {
         // Обновляем локальные данные
         await loadData();
       } else {
-        throw new Error(response.error);
+        throw new Error(response.error || 'Неизвестная ошибка');
       }
     } catch (error) {
       console.error('❌ Ошибка повышения приоритета:', error);
-      alert(`Ошибка: ${error.message}`);
+      alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
     }
   };
 
   // Универсальная функция Fix для разных типов проблем
-  const handleFix = (issue) => {
+  const handleFix = (issue: JiraIssue): void => {
     const isUnassigned = !issue.assignee;
     const isLowPriority = issue.priority.name === 'Low' || issue.priority.name === 'Lowest';
     const isLowPriorityWithDeadline = isLowPriority && issue.duedate &&
@@ -194,7 +199,7 @@ export const App = () => {
   };
 
   // Закрытие всех модалок
-  const closeModals = () => {
+  const closeModals = (): void => {
     setShowAssignModal(false);
     setShowPriorityModal(false);
     setShowMultiFixModal(false);
@@ -203,7 +208,7 @@ export const App = () => {
   };
 
   // Назначение исполнителя из модалки
-  const handleAssignFromModal = async (accountId) => {
+  const handleAssignFromModal = async (accountId: string): Promise<void> => {
     if (selectedIssue) {
       await handleAssignIssue(selectedIssue.key, accountId);
       closeModals();
@@ -211,7 +216,7 @@ export const App = () => {
   };
 
   // Повышение приоритета из модалки
-  const handleFixPriorityFromModal = async (priorityId = '3') => {
+  const handleFixPriorityFromModal = async (priorityId: string = '3'): Promise<void> => {
     if (selectedIssue) {
       await handleFixPriority(selectedIssue.key, priorityId);
       closeModals();
@@ -250,7 +255,7 @@ export const App = () => {
   );
 
   // Функция для определения активности участника
-  const getUserActivity = (user) => {
+  const getUserActivity = (user: JiraUser): boolean => {
     const assignedCount = issues.filter(issue =>
       issue.assignee && issue.assignee.accountId === user.accountId
     ).length;
@@ -260,7 +265,7 @@ export const App = () => {
   };
 
   // Получаем активных участников для назначения
-  const getActiveUsers = () => {
+  const getActiveUsers = (): JiraUser[] => {
     return users.filter(user => user.active && getUserActivity(user));
   };
 
@@ -786,55 +791,37 @@ export const App = () => {
                 ))}
                 {unassignedIssues.length > 5 && (
                   <li style={{ fontSize: '14px', fontStyle: 'italic', color: '#666' }}>
-                    ... и еще {unassignedIssues.length - 5} задач
+                    ...и еще {unassignedIssues.length - 5} задач
                   </li>
                 )}
               </ul>
             </div>
 
-            <div style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Исполнители будут назначены случайным образом из списка <strong>активных участников</strong> проекта.
-              </p>
-              <div style={{ 
-                padding: '10px', 
-                backgroundColor: '#e3f2fd', 
-                borderRadius: '4px',
-                border: '1px solid #bbdefb'
-              }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>📊 Статистика команды:</div>
-                <div>👥 Всего участников: <strong>{users.length}</strong></div>
-                <div>🟢 Доступных участников: <strong>{getActiveUsers().length}</strong> (могут взять задачи)</div>
-                <div>🔴 Загруженных участников: <strong>{users.length - getActiveUsers().length}</strong> (2/2 задачи)</div>
-              </div>
+            <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#e3f2fd', borderRadius: '4px', fontSize: '14px' }}>
+              <strong>ℹ️ Как это работает:</strong> Исполнители назначаются случайно из активных участников 
+              (у которых меньше 2 задач). Доступно участников: <strong>{getActiveUsers().length}</strong>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button 
-                onClick={closeModals}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
+              <button onClick={closeModals} style={{
+                padding: '10px 16px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}>
                 Отмена
               </button>
-              <button 
-                onClick={handleAutoAssign}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
-                }}
-              >
+              <button onClick={handleAutoAssign} style={{
+                padding: '10px 16px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}>
                 🔄 Подтвердить назначение
               </button>
             </div>
@@ -844,3 +831,5 @@ export const App = () => {
     </div>
   );
 };
+
+export default App;

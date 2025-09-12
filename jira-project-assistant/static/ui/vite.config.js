@@ -18,5 +18,8 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
-  base: './'
+  base: './',
+  esbuild: {
+    target: 'es2020'
+  }
 });
