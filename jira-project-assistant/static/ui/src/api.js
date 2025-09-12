@@ -16,19 +16,19 @@ const initializeContext = async () => {
                     resolve(context);
                 });
             });
-            
+
             if (context && context.jira && context.jira.project) {
                 currentProjectKey = context.jira.project.key;
                 console.log('✅ Получен контекст проекта:', currentProjectKey);
                 return currentProjectKey;
             }
         }
-        
+
         // Fallback - используем фиксированный ключ проекта для тестирования
         currentProjectKey = 'SCRUM';
         console.log('⚠️ Используем fallback ключ проекта:', currentProjectKey);
         return currentProjectKey;
-        
+
     } catch (error) {
         console.error('❌ Ошибка получения контекста:', error);
         currentProjectKey = 'SCRUM';
@@ -40,7 +40,7 @@ const initializeContext = async () => {
 const makeJiraRequest = async (endpoint, options = {}) => {
     try {
         console.log(`📡 Запрос к Jira API: ${endpoint}`);
-        
+
         const response = await requestJira(endpoint, {
             method: 'GET',
             headers: {
@@ -67,7 +67,7 @@ const makeJiraRequest = async (endpoint, options = {}) => {
 // Mock данные для разработки и тестирования
 function getMockData(functionName, payload) {
     console.log(`🎭 Mock данные для ${functionName}`);
-    
+
     switch (functionName) {
         case 'getProjectIssues':
             return {
@@ -143,7 +143,7 @@ function getMockData(functionName, payload) {
                 ],
                 projectKey: currentProjectKey || 'SCRUM'
             };
-            
+
         case 'getProjectUsers':
             return {
                 success: true,
@@ -171,19 +171,19 @@ function getMockData(functionName, payload) {
                     }
                 ]
             };
-            
+
         case 'updateIssueAssignee':
             return {
                 success: true,
                 message: `Исполнитель назначен для задачи ${payload.issueKey}`
             };
-            
+
         case 'updateIssuePriority':
             return {
                 success: true,
                 message: `Приоритет обновлен для задачи ${payload.issueKey}`
             };
-            
+
         case 'autoAssignUnassigned':
             return {
                 success: true,
@@ -193,7 +193,32 @@ function getMockData(functionName, payload) {
                 ],
                 summary: 'Назначено 2 из 2 задач'
             };
-            
+
+        case 'getProjects':
+            return {
+                success: true,
+                data: [
+                    {
+                        id: '10000',
+                        key: 'SCRUM',
+                        name: 'Scrum Project',
+                        projectTypeKey: 'software'
+                    },
+                    {
+                        id: '10001',
+                        key: 'KANBAN',
+                        name: 'Kanban Board',
+                        projectTypeKey: 'software'
+                    },
+                    {
+                        id: '10002',
+                        key: 'SUPPORT',
+                        name: 'Support Desk',
+                        projectTypeKey: 'service_desk'
+                    }
+                ]
+            };
+
         default:
             return {
                 success: false,
@@ -212,6 +237,18 @@ export const JiraAPI = {
         return true;
     },
 
+    // Смена текущего проекта
+    setCurrentProject(projectKey) {
+        console.log(`🔄 Смена проекта на: ${projectKey}`);
+        currentProjectKey = projectKey;
+        return currentProjectKey;
+    },
+
+    // Получение текущего проекта
+    getCurrentProject() {
+        return currentProjectKey;
+    },
+
     // Получение задач проекта
     async getProjectIssues() {
         try {
@@ -220,7 +257,7 @@ export const JiraAPI = {
             }
 
             const jql = `project = ${currentProjectKey} ORDER BY created DESC`;
-            
+
             const data = await makeJiraRequest('/rest/api/3/search', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -296,6 +333,30 @@ export const JiraAPI = {
         } catch (error) {
             console.error('❌ Ошибка получения пользователей, используем mock данные:', error);
             return getMockData('getProjectUsers');
+        }
+    },
+
+    // Получение списка проектов
+    async getProjects() {
+        try {
+            const data = await makeJiraRequest('/rest/api/3/project/search?maxResults=50');
+
+            // Преобразуем данные в нужный формат
+            const projects = data.values.map(project => ({
+                id: project.id,
+                key: project.key,
+                name: project.name,
+                projectTypeKey: project.projectTypeKey
+            }));
+
+            return {
+                success: true,
+                data: projects
+            };
+
+        } catch (error) {
+            console.error('❌ Ошибка получения проектов, используем mock данные:', error);
+            return getMockData('getProjects');
         }
     },
 

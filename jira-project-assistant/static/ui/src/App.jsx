@@ -5,12 +5,15 @@ export const App = () => {
   const [loading, setLoading] = useState(true);
   const [issues, setIssues] = useState([]);
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [currentProject, setCurrentProject] = useState(null);
   const [error, setError] = useState(null);
 
   // Состояния для модальных окон
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showPriorityModal, setShowPriorityModal] = useState(false);
   const [showMultiFixModal, setShowMultiFixModal] = useState(false);
+  const [showAutoAssignConfirm, setShowAutoAssignConfirm] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
 
   useEffect(() => {
@@ -26,7 +29,14 @@ export const App = () => {
       await JiraAPI.initialize();
       console.log('✅ JiraAPI готов, запускаем загрузку данных');
 
-      // Загружаем данные
+      // Загружаем список проектов
+      await loadProjects();
+
+      // Устанавливаем текущий проект
+      const currentProjectKey = JiraAPI.getCurrentProject();
+      setCurrentProject(currentProjectKey);
+
+      // Загружаем данные текущего проекта
       await loadData();
 
     } catch (error) {
@@ -34,6 +44,23 @@ export const App = () => {
       setError(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProjects = async () => {
+    try {
+      console.log('📡 Загрузка списка проектов...');
+      const projectsResponse = await JiraAPI.getProjects();
+
+      if (projectsResponse.success) {
+        setProjects(projectsResponse.data);
+        console.log(`✅ Загружено ${projectsResponse.data.length} проектов`);
+      } else {
+        throw new Error(`Ошибка загрузки проектов: ${projectsResponse.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки проектов:', error);
+      setError(error.message);
     }
   };
 
@@ -85,6 +112,25 @@ export const App = () => {
     }
   };
 
+  const handleProjectChange = async (projectKey) => {
+    try {
+      console.log(`🔄 Смена проекта на: ${projectKey}`);
+      setLoading(true);
+      
+      // Устанавливаем новый проект в API
+      JiraAPI.setCurrentProject(projectKey);
+      setCurrentProject(projectKey);
+      
+      // Перезагружаем данные для нового проекта
+      await loadData();
+    } catch (error) {
+      console.error('❌ Ошибка смены проекта:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAutoAssign = async () => {
     try {
       console.log('🔄 Массовое назначение задач...');
@@ -92,7 +138,7 @@ export const App = () => {
 
       if (response.success) {
         console.log('✅ Массовое назначение завершено');
-        alert(response.summary);
+        setShowAutoAssignConfirm(false);
         await loadData();
       } else {
         throw new Error(response.error);
@@ -100,6 +146,7 @@ export const App = () => {
     } catch (error) {
       console.error('❌ Ошибка массового назначения:', error);
       alert(`Ошибка: ${error.message}`);
+      setShowAutoAssignConfirm(false);
     }
   };
 
@@ -150,6 +197,7 @@ export const App = () => {
     setShowAssignModal(false);
     setShowPriorityModal(false);
     setShowMultiFixModal(false);
+    setShowAutoAssignConfirm(false);
     setSelectedIssue(null);
   };
 
@@ -211,7 +259,34 @@ export const App = () => {
         borderRadius: '8px',
         border: '1px solid #dee2e6'
       }}>
-        <h3>📊 Статистика проекта</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <h3>📊 Статистика проекта</h3>
+          
+          {/* Dropdown выбора проекта */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <label htmlFor="project-select" style={{ fontWeight: 'bold' }}>Проект:</label>
+            <select
+              id="project-select"
+              value={currentProject || ''}
+              onChange={(e) => handleProjectChange(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                backgroundColor: 'white',
+                cursor: 'pointer',
+                minWidth: '150px'
+              }}
+            >
+              {projects.map(project => (
+                <option key={project.key} value={project.key}>
+                  {project.key} - {project.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', gap: '20px', marginBottom: '15px' }}>
           <span>Всего задач: <strong>{issues.length}</strong></span>
           <span>Без исполнителя: <strong style={{ color: unassignedIssues.length > 0 ? 'red' : 'green' }}>
@@ -225,7 +300,7 @@ export const App = () => {
 
         {unassignedIssues.length > 0 && (
           <button
-            onClick={handleAutoAssign}
+            onClick={() => setShowAutoAssignConfirm(true)}
             style={{
               padding: '8px 16px',
               backgroundColor: '#007bff',
@@ -534,6 +609,83 @@ export const App = () => {
                 cursor: 'pointer'
               }}>
                 Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Подтверждающий диалог для массового назначения */}
+      {showAutoAssignConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            minWidth: '400px',
+            maxWidth: '500px'
+          }}>
+            <h3>🔄 Подтверждение массового назначения</h3>
+            <p>Вы собираетесь автоматически назначить исполнителей для <strong>{unassignedIssues.length}</strong> задач без исполнителя.</p>
+            
+            <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+              <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>Задачи для назначения:</p>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                {unassignedIssues.slice(0, 5).map(issue => (
+                  <li key={issue.id} style={{ fontSize: '14px', marginBottom: '5px' }}>
+                    {issue.key} - {issue.summary}
+                  </li>
+                ))}
+                {unassignedIssues.length > 5 && (
+                  <li style={{ fontSize: '14px', fontStyle: 'italic', color: '#666' }}>
+                    ... и еще {unassignedIssues.length - 5} задач
+                  </li>
+                )}
+              </ul>
+            </div>
+
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+              Исполнители будут назначены случайным образом из списка активных участников проекта.
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={closeModals}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Отмена
+              </button>
+              <button 
+                onClick={handleAutoAssign}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                🔄 Подтвердить назначение
               </button>
             </div>
           </div>
