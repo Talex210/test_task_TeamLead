@@ -686,40 +686,97 @@ export const JiraAPI = {
                 })
             });
 
-            // 4. Определяем доступных пользователей (у кого меньше 2 задач)
-            const activeUsers = users.filter(user => {
-                if (!user.active) return false;
+            // 4. Определяем доступных пользователей и их оставшуюся емкость
+            // По умолчанию лимит 2 задачи на человека. С учетом текущего количества уменьшаем остаток.
+            const MAX_TASKS_PER_USER = 2;
 
-                const assignedCount = allIssuesData.issues.filter(issue =>
-                    issue.fields.assignee && issue.fields.assignee.accountId === user.accountId
-                ).length;
+            type UserCap = {
+                user: JiraUserResponse;
+                remaining: number;
+            };
 
-                return assignedCount < 2; // Доступен если меньше 2 задач
-            });
+            // Текущее количество задач на пользователя
+            const currentAssignedCountByUser = new Map<string, number>();
+            for (const issue of allIssuesData.issues) {
+                const assignee = issue.fields.assignee;
+                if (assignee?.accountId) {
+                    currentAssignedCountByUser.set(
+                        assignee.accountId,
+                        (currentAssignedCountByUser.get(assignee.accountId) ?? 0) + 1
+                    );
+                }
+            }
 
-            if (activeUsers.length === 0) {
+            // Собираем список доступных с расчетом остатка
+            const availableUsers: UserCap[] = users
+                .filter(user => user.active)
+                .map(user => {
+                    const assignedCount = currentAssignedCountByUser.get(user.accountId) ?? 0;
+                    const remaining = Math.max(0, MAX_TASKS_PER_USER - assignedCount);
+                    return { user, remaining };
+                })
+                .filter(uc => uc.remaining > 0);
+
+            if (availableUsers.length === 0) {
                 return {
                     success: false,
-                    error: 'Нет доступных пользователей для назначения (все имеют максимальную загрузку 2/2 задачи)'
+                    error: `Нет доступных пользователей для назначения (все достигли лимита ${MAX_TASKS_PER_USER})`
                 };
             }
 
-            // 5. Назначаем задачи случайным активным пользователям
-            const results = [];
+            // 5. Распределяем round-robin по пользователям с учетом остатка емкости
+            const results: {
+                issueKey: string;
+                assignedTo?: string;
+                success: boolean;
+                error?: string;
+            }[] = [];
+
+            let userIndex = 0;
+
+            const getNextAvailableIndex = (): number | null => {
+                if (availableUsers.length === 0) return null;
+                let attempts = 0;
+                let idx = userIndex;
+                while (attempts < availableUsers.length) {
+                    if (availableUsers[idx].remaining > 0) {
+                        userIndex = (idx + 1) % availableUsers.length; // следующий старт
+                        return idx;
+                    }
+                    idx = (idx + 1) % availableUsers.length;
+                    attempts++;
+                }
+                return null;
+            };
+
             for (const issue of unassignedIssues) {
-                const randomUser = activeUsers[Math.floor(Math.random() * activeUsers.length)];
+                const idx = getNextAvailableIndex();
+                if (idx === null) {
+                    // Емкость всех исчерпана — прекращаем назначение оставшихся задач
+                    results.push({
+                        issueKey: issue.key,
+                        success: false,
+                        error: 'Нет доступных разработчиков (достигнут лимит назначений)'
+                    });
+                    continue;
+                }
+
+                const target = availableUsers[idx];
 
                 try {
                     await makeJiraRequest(`/rest/api/3/issue/${issue.key}/assignee`, {
                         method: 'PUT',
                         body: JSON.stringify({
-                            accountId: randomUser.accountId
+                            accountId: target.user.accountId
                         })
                     });
 
+                    // Успешно назначили — уменьшаем локальную емкость
+                    target.remaining -= 1;
+
                     results.push({
                         issueKey: issue.key,
-                        assignedTo: randomUser.displayName,
+                        assignedTo: target.user.displayName,
                         success: true
                     });
 
@@ -736,8 +793,8 @@ export const JiraAPI = {
 
             return {
                 success: true,
-                results: results,
-                summary: `Назначено ${successCount} из ${unassignedIssues.length} задач доступным участникам`
+                results,
+                summary: `Назначено ${successCount} из ${unassignedIssues.length} задач с учетом лимита ${MAX_TASKS_PER_USER} на разработчика`
             };
 
         } catch (error) {
@@ -749,5 +806,3 @@ export const JiraAPI = {
 
 // Инициализируем API при загрузке модуля
 JiraAPI.initialize();
-
-export default JiraAPI;
