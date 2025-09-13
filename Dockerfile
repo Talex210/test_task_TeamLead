@@ -1,8 +1,4 @@
-# ===============================================
-# Multi-stage build for Jira Project Assistant
-# ===============================================
-
-# Stage 1: Build the UI application - используем стандартный Node.js вместо Alpine
+# Stage 1: Build the UI application
 FROM node:18 AS build
 
 # Set working directory for UI
@@ -11,7 +7,7 @@ WORKDIR /app/static/ui
 # Copy UI package files first
 COPY static/ui/package*.json ./
 
-# Устанавливаем зависимости включая devDependencies (нужны для сборки)
+# Install ALL dependencies (including devDependencies for build)
 RUN npm install
 
 # Copy UI source code
