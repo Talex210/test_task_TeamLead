@@ -15,20 +15,17 @@ import { PriorityModal } from './components/modals/PriorityModal';
 import { MultiFixModal } from './components/modals/MultiFixModal';
 import { AutoAssignConfirm } from './components/modals/AutoAssignConfirm';
 
-export const App: React.FC = () => {
+import { observer } from 'mobx-react-lite';
+import { appUiStore } from './store/appUiStore';
+import { Container, Typography, CircularProgress, Alert, Button, Box } from '@mui/material';
+
+export const App: React.FC = observer(() => {
     const [loading, setLoading] = useState<boolean>(true);
     const [issues, setIssues] = useState<JiraIssue[]>([]);
     const [users, setUsers] = useState<JiraUser[]>([]);
     const [projects, setProjects] = useState<JiraProject[]>([]);
     const [currentProject, setCurrentProject] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-
-    const [showAssignModal, setShowAssignModal] = useState<boolean>(false);
-    const [showPriorityModal, setShowPriorityModal] = useState<boolean>(false);
-    const [showMultiFixModal, setShowMultiFixModal] = useState<boolean>(false);
-    const [showAutoAssignConfirm, setShowAutoAssignConfirm] = useState<boolean>(false);
-    const [selectedIssue, setSelectedIssue] = useState<JiraIssue | null>(null);
-    const [activeTab, setActiveTab] = useState<'issues' | 'team'>('issues');
 
     useEffect(() => {
         initializeApp();
@@ -119,7 +116,7 @@ export const App: React.FC = () => {
         try {
             const response = await JiraAPI.autoAssignUnassigned();
             if (response.success) {
-                setShowAutoAssignConfirm(false);
+                appUiStore.setShowAutoAssignConfirm(false);
                 await loadData();
             } else {
                 throw new Error(response.error || 'Неизвестная ошибка');
@@ -127,7 +124,7 @@ export const App: React.FC = () => {
         } catch (error) {
             console.error('❌ Ошибка массового назначения:', error);
             alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-            setShowAutoAssignConfirm(false);
+            appUiStore.setShowAutoAssignConfirm(false);
         }
     };
 
@@ -151,58 +148,60 @@ export const App: React.FC = () => {
         const isLowPriorityWithDeadline = isLowPriority && issue.duedate &&
             new Date(issue.duedate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-        setSelectedIssue(issue);
+        appUiStore.setSelectedIssue(issue);
 
         if (isUnassigned && isLowPriorityWithDeadline) {
-            setShowMultiFixModal(true);
+            appUiStore.setShowMultiFixModal(true);
         } else if (isUnassigned) {
-            setShowAssignModal(true);
+            appUiStore.setShowAssignModal(true);
         } else if (isLowPriorityWithDeadline) {
-            setShowPriorityModal(true);
+            appUiStore.setShowPriorityModal(true);
         }
     };
 
     const closeModals = (): void => {
-        setShowAssignModal(false);
-        setShowPriorityModal(false);
-        setShowMultiFixModal(false);
-        setShowAutoAssignConfirm(false);
-        setSelectedIssue(null);
+        appUiStore.resetModals();
+        appUiStore.setSelectedIssue(null);
     };
 
     const handleAssignFromModal = async (accountId: string): Promise<void> => {
-        if (selectedIssue) {
-            await handleAssignIssue(selectedIssue.key, accountId);
+        if (appUiStore.selectedIssue) {
+            await handleAssignIssue(appUiStore.selectedIssue.key, accountId);
             closeModals();
         }
     };
 
     const handleFixPriorityFromModal = async (priorityId: string = '3'): Promise<void> => {
-        if (selectedIssue) {
-            await handleFixPriority(selectedIssue.key, priorityId);
+        if (appUiStore.selectedIssue) {
+            await handleFixPriority(appUiStore.selectedIssue.key, priorityId);
             closeModals();
         }
     };
 
     if (loading) {
         return (
-            <div className={styles.appLoading}>
-                <h2>🚀 Jira Team Assistant</h2>
-                <p>Загрузка данных...</p>
-            </div>
+            <Container maxWidth="md" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 8 }}>
+                <Typography variant="h4" gutterBottom>🚀 Jira Team Assistant</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <CircularProgress />
+                    <Typography>Загрузка данных...</Typography>
+                </Box>
+            </Container>
         );
     }
 
     if (error) {
         return (
-            <div className={styles.appError}>
-                <h2>🚀 Jira Team Assistant</h2>
-                <div className={styles.errorBox}>
-                    <h3>❌ Ошибка</h3>
-                    <p>{error}</p>
-                    <button onClick={() => window.location.reload()}>Перезагрузить</button>
-                </div>
-            </div>
+            <Container maxWidth="md" sx={{ mt: 8 }}>
+                <Typography variant="h4" gutterBottom>🚀 Jira Team Assistant</Typography>
+                <Alert severity="error" sx={{ mb: 2 }}>
+                    <Typography variant="h6" sx={{ mb: 1 }}>❌ Ошибка</Typography>
+                    <Typography>{error}</Typography>
+                </Alert>
+                <Button variant="contained" color="primary" onClick={() => window.location.reload()}>
+                    Перезагрузить
+                </Button>
+            </Container>
         );
     }
 
@@ -225,73 +224,75 @@ export const App: React.FC = () => {
     };
 
     return (
-        <div className={styles.app}>
-            <Tabs
-                activeTab={activeTab}
-                onChange={setActiveTab}
-            />
-
-            {activeTab === 'issues' && (
-                <div>
-                    <ProjectStatsPanel
-                        issues={issues}
-                        users={users}
-                        projects={projects}
-                        currentProject={currentProject || ''}
-                        onProjectChange={handleProjectChange}
-                        unassignedCount={unassignedIssues.length}
-                        problemCount={problemIssues.length}
-                        onOpenAutoAssign={() => setShowAutoAssignConfirm(true)}
-                        canAutoAssign={getActiveUsers().length > 0}
-                        activeUsersCount={getActiveUsers().length}
-                    />
-
-                    <IssuesTable
-                        issues={issues}
-                        onFix={handleFix}
-                    />
-                </div>
-            )}
-
-            {activeTab === 'team' && (
-                <TeamGrid
-                    users={users}
-                    issues={issues}
-                    getUserActivity={getUserActivity}
+        <Container maxWidth="lg" sx={{ py: 2 }}>
+            <div className={styles.app}>
+                <Tabs
+                    activeTab={appUiStore.activeTab}
+                    onChange={appUiStore.setActiveTab}
                 />
-            )}
 
-            <AssignModal
-                show={showAssignModal && !!selectedIssue}
-                issue={selectedIssue}
-                users={getActiveUsers()}
-                issues={issues}
-                onAssign={handleAssignFromModal}
-                onClose={closeModals}
-            />
+                {appUiStore.activeTab === 'issues' && (
+                    <div>
+                        <ProjectStatsPanel
+                            issues={issues}
+                            users={users}
+                            projects={projects}
+                            currentProject={currentProject || ''}
+                            onProjectChange={handleProjectChange}
+                            unassignedCount={unassignedIssues.length}
+                            problemCount={problemIssues.length}
+                            onOpenAutoAssign={() => appUiStore.setShowAutoAssignConfirm(true)}
+                            canAutoAssign={getActiveUsers().length > 0}
+                            activeUsersCount={getActiveUsers().length}
+                        />
 
-            <PriorityModal
-                show={showPriorityModal && !!selectedIssue}
-                issue={selectedIssue}
-                onUpdatePriority={handleFixPriorityFromModal}
-                onClose={closeModals}
-            />
+                        <IssuesTable
+                            issues={issues}
+                            onFix={handleFix}
+                        />
+                    </div>
+                )}
 
-            <MultiFixModal
-                show={showMultiFixModal && !!selectedIssue}
-                issue={selectedIssue}
-                onChooseAssign={() => { setShowMultiFixModal(false); setShowAssignModal(true); }}
-                onChoosePriority={() => { setShowMultiFixModal(false); setShowPriorityModal(true); }}
-                onClose={closeModals}
-            />
+                {appUiStore.activeTab === 'team' && (
+                    <TeamGrid
+                        users={users}
+                        issues={issues}
+                        getUserActivity={getUserActivity}
+                    />
+                )}
 
-            <AutoAssignConfirm
-                show={showAutoAssignConfirm}
-                unassignedIssues={unassignedIssues}
-                activeUsersCount={getActiveUsers().length}
-                onConfirm={handleAutoAssign}
-                onClose={closeModals}
-            />
-        </div>
+                <AssignModal
+                    show={appUiStore.showAssignModal && !!appUiStore.selectedIssue}
+                    issue={appUiStore.selectedIssue}
+                    users={getActiveUsers()}
+                    issues={issues}
+                    onAssign={handleAssignFromModal}
+                    onClose={closeModals}
+                />
+
+                <PriorityModal
+                    show={appUiStore.showPriorityModal && !!appUiStore.selectedIssue}
+                    issue={appUiStore.selectedIssue}
+                    onUpdatePriority={handleFixPriorityFromModal}
+                    onClose={closeModals}
+                />
+
+                <MultiFixModal
+                    show={appUiStore.showMultiFixModal && !!appUiStore.selectedIssue}
+                    issue={appUiStore.selectedIssue}
+                    onChooseAssign={() => { appUiStore.setShowMultiFixModal(false); appUiStore.setShowAssignModal(true); }}
+                    onChoosePriority={() => { appUiStore.setShowMultiFixModal(false); appUiStore.setShowPriorityModal(true); }}
+                    onClose={closeModals}
+                />
+
+                <AutoAssignConfirm
+                    show={appUiStore.showAutoAssignConfirm}
+                    unassignedIssues={unassignedIssues}
+                    activeUsersCount={getActiveUsers().length}
+                    onConfirm={handleAutoAssign}
+                    onClose={closeModals}
+                />
+            </div>
+        </Container>
     );
-};
+});
