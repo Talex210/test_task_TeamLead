@@ -1,0 +1,42 @@
+.section {
+    margin-bottom: 20px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--table-border);
+}
+
+.table th,
+.table td {
+    padding: 10px;
+    border: 1px solid var(--table-border);
+    text-align: left;
+}
+
+.table thead tr {
+    background: var(--bg);
+}
+
+.rowRed {
+    background: #ffebee;
+}
+
+.rowOrange {
+    background: #fff3e0;
+}
+
+.cellKey {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.dotRed {
+    color: red;
+}
+
+.dotOrange {
+    color: orange;
+}

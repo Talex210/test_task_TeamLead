@@ -1,5 +1,6 @@
 import React from 'react';
 import type { JiraIssue, JiraUser, JiraProject } from '../types/jira';
+import styles from './ProjectStatsPanel.module.css';
 
 export const ProjectStatsPanel: React.FC<{
     issues: JiraIssue[];
@@ -17,10 +18,10 @@ export const ProjectStatsPanel: React.FC<{
           unassignedCount, problemCount, onOpenAutoAssign, canAutoAssign, activeUsersCount
       }) => {
     return (
-        <div className="panel">
-            <div className="panel__header">
+        <div className={styles.panel}>
+            <div className={styles.panelHeader}>
                 <h3>📊 Статистика проекта</h3>
-                <div className="panel__project">
+                <div className={styles.panelProject}>
                     <label htmlFor="project-select">Проект:</label>
                     <select
                         id="project-select"
@@ -36,7 +37,7 @@ export const ProjectStatsPanel: React.FC<{
                 </div>
             </div>
 
-            <div className="panel__stats">
+            <div className={styles.panelStats}>
                 <span>Всего задач: <strong>{issues.length}</strong></span>
                 <span>Без исполнителя: <strong className={unassignedCount > 0 ? 'text-red' : 'text-green'}>
           {unassignedCount}
@@ -48,7 +49,7 @@ export const ProjectStatsPanel: React.FC<{
             </div>
 
             {unassignedCount > 0 && (
-                <div className="panel__actions">
+                <div className={styles.panelActions}>
                     <button
                         onClick={onOpenAutoAssign}
                         disabled={!canAutoAssign}
@@ -57,14 +58,10 @@ export const ProjectStatsPanel: React.FC<{
                         🔄 Auto-assign unassigned ({unassignedCount})
                     </button>
                     {!canAutoAssign && (
-                        <span className="hint danger">
-              ⚠️ Все участники загружены (2/2 задачи)
-            </span>
+                        <span className="hint danger">⚠️ Все участники загружены (2/2 задачи)</span>
                     )}
                     {canAutoAssign && (
-                        <span className="hint info">
-              Доступно участников: <strong>{activeUsersCount}</strong>
-            </span>
+                        <span className="hint info">Доступно участников: <strong>{activeUsersCount}</strong></span>
                     )}
                 </div>
             )}

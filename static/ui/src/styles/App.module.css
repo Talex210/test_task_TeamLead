@@ -1,0 +1,14 @@
+.app {
+    padding: 20px;
+}
+
+.appLoading,
+.appError {
+    padding: 20px;
+    text-align: center;
+}
+
+.errorBox {
+    color: red;
+    margin-top: 20px;
+}

@@ -1,13 +1,14 @@
 import React from 'react';
 import type { AutoAssignConfirmProps } from '../../types/jira';
+import styles from './Modal.module.css';
 
 export const AutoAssignConfirm: React.FC<AutoAssignConfirmProps & { activeUsersCount: number }> = ({
-                                                                                                       show, onClose, unassignedIssues, onConfirm, activeUsersCount
-                                                                                                   }) => {
+    show, onClose, unassignedIssues, onConfirm, activeUsersCount
+}) => {
     if (!show) return null;
     return (
-        <div className="modal">
-            <div className="modal__content">
+        <div className={styles.modal}>
+            <div className={styles.modalContent}>
                 <h3>🔄 Подтверждение массового назначения</h3>
                 <p>Вы собираетесь автоматически назначить исполнителей для <strong>{unassignedIssues.length}</strong> задач без исполнителя.</p>
 
@@ -28,7 +29,7 @@ export const AutoAssignConfirm: React.FC<AutoAssignConfirmProps & { activeUsersC
                     (у которых меньше 2 задач). Доступно участников: <strong>{activeUsersCount}</strong>
                 </div>
 
-                <div className="modal__actions">
+                <div className={styles.modalActions}>
                     <button className="btn btn--secondary" onClick={onClose}>Отмена</button>
                     <button className="btn btn--success" onClick={onConfirm}>🔄 Подтвердить назначение</button>
                 </div>

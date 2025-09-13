@@ -1,5 +1,6 @@
 import React from 'react';
 import type { JiraIssue, JiraUser } from '../types/jira';
+import styles from './TeamGrid.module.css';
 
 export const TeamGrid: React.FC<{
     users: JiraUser[];
@@ -13,7 +14,7 @@ export const TeamGrid: React.FC<{
                 <strong>ℹ️ Логика активности:</strong> Максимум 2 задачи на участника.
                 Участники с 2 задачами считаются неактивными и не могут получить новые задачи.
             </div>
-            <div className="team-grid">
+            <div className={styles.teamGrid}>
                 {users.map(user => {
                     const assignedCount = issues.filter(issue =>
                         issue.assignee && issue.assignee.accountId === user.accountId
@@ -21,13 +22,17 @@ export const TeamGrid: React.FC<{
                     const isUserActive = getUserActivity(user);
 
                     return (
-                        <div key={user.accountId} className={`card ${isUserActive ? 'card--active' : 'card--inactive'}`}>
-                            <div className="card__title">{user.displayName}</div>
-                            <div className="card__meta">
+                        <div
+                            key={user.accountId}
+                            className={`${styles.card} ${isUserActive ? styles.cardActive : styles.cardInactive}`}
+                        >
+                            <div className={styles.cardTitle}>{user.displayName}</div>
+                            <div className={styles.cardMeta}>
                                 📋 Назначено задач: <strong>{assignedCount} / 2</strong>
                             </div>
-                            <div className="card__status">
-                                ⚡ Статус: <span className={`status ${isUserActive ? 'green' : 'red'}`}>
+                            <div className={styles.cardStatus}>
+                                ⚡ Статус:{" "}
+                                <span className={isUserActive ? 'text-green' : 'text-red'}>
                   {isUserActive ? '🟢 Может взять задачи' : '🔴 Загружен (2/2)'}
                 </span>
                             </div>

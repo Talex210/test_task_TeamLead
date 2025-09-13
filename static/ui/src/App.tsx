@@ -5,7 +5,7 @@ import type {
     JiraUser,
     JiraProject,
 } from './types/jira';
-import './styles/app.css';
+import styles from './styles/App.module.css';
 import { Tabs } from './components/Tabs';
 import { ProjectStatsPanel } from './components/ProjectStatsPanel';
 import { IssuesTable } from './components/IssuesTable';
@@ -186,7 +186,7 @@ export const App: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="app__loading">
+            <div className={styles.appLoading}>
                 <h2>🚀 Jira Team Assistant</h2>
                 <p>Загрузка данных...</p>
             </div>
@@ -195,9 +195,9 @@ export const App: React.FC = () => {
 
     if (error) {
         return (
-            <div className="app__error">
+            <div className={styles.appError}>
                 <h2>🚀 Jira Team Assistant</h2>
-                <div className="error-box">
+                <div className={styles.errorBox}>
                     <h3>❌ Ошибка</h3>
                     <p>{error}</p>
                     <button onClick={() => window.location.reload()}>Перезагрузить</button>
@@ -225,7 +225,7 @@ export const App: React.FC = () => {
     };
 
     return (
-        <div className="app">
+        <div className={styles.app}>
             <Tabs
                 activeTab={activeTab}
                 onChange={setActiveTab}

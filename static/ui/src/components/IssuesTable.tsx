@@ -1,14 +1,15 @@
 import React from 'react';
 import type { JiraIssue } from '../types/jira';
+import styles from './IssuesTable.module.css';
 
 export const IssuesTable: React.FC<{
     issues: JiraIssue[];
     onFix: (issue: JiraIssue) => void;
 }> = ({ issues, onFix }) => {
     return (
-        <div className="section">
+        <div className={styles.section}>
             <h3>📋 Задачи проекта</h3>
-            <table className="table">
+            <table className={styles.table}>
                 <thead>
                 <tr>
                     <th>Key</th>
@@ -30,14 +31,14 @@ export const IssuesTable: React.FC<{
                         <tr
                             key={issue.id}
                             className={
-                                isUnassigned ? 'row--red' :
-                                    isLowPriorityWithDeadline ? 'row--orange' : ''
+                                isUnassigned ? styles.rowRed :
+                                    isLowPriorityWithDeadline ? styles.rowOrange : undefined
                             }
                         >
                             <td>
-                                <div className="cell-key">
-                                    {isUnassigned && <span className="dot red">🔴</span>}
-                                    {isLowPriorityWithDeadline && <span className="dot orange">🟡</span>}
+                                <div className={styles.cellKey}>
+                                    {isUnassigned && <span className={styles.dotRed}>🔴</span>}
+                                    {isLowPriorityWithDeadline && <span className={styles.dotOrange}>🟡</span>}
                                     {issue.key}
                                 </div>
                             </td>

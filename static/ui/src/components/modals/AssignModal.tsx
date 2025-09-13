@@ -1,17 +1,18 @@
 import React from 'react';
 import type { AssignModalProps } from '../../types/jira';
+import styles from './Modal.module.css';
 
 export const AssignModal: React.FC<AssignModalProps> = ({
-                                                            show, onClose, issue, users, issues, onAssign
-                                                        }) => {
+    show, onClose, issue, users, issues, onAssign
+}) => {
     if (!show || !issue) return null;
     return (
-        <div className="modal">
-            <div className="modal__content">
+        <div className={styles.modal}>
+            <div className={styles.modalContent}>
                 <h3>👤 Назначить исполнителя</h3>
                 <p><strong>Задача:</strong> {issue.key} - {issue.summary}</p>
                 <p>Выберите исполнителя из активных участников:</p>
-                <div className="modal__list">
+                <div className={styles.modalList}>
                     {users.length > 0 ? users.map(user => {
                         const assignedCount = issues.filter(i => i.assignee && i.assignee.accountId === user.accountId).length;
                         return (
