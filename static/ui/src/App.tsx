@@ -1,10 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { JiraAPI } from './api';
-import type {
-    JiraIssue,
-    JiraUser,
-    JiraProject,
-} from './types/jira';
+import React, { useEffect } from 'react';
+import type { JiraIssue } from './types/jira';
 import styles from './styles/App.module.css';
 import { Tabs } from './components/Tabs';
 import { ProjectStatsPanel } from './components/ProjectStatsPanel';
@@ -18,111 +13,30 @@ import { AutoAssignConfirm } from './components/modals/AutoAssignConfirm';
 import { observer } from 'mobx-react-lite';
 import { appUiStore } from './store/appUiStore';
 import { Container, Typography, CircularProgress, Alert, Button, Box } from '@mui/material';
+import { appDataStore } from './store/appDataStore';
 
 export const App: React.FC = observer(() => {
-    const [loading, setLoading] = useState<boolean>(true);
-    const [issues, setIssues] = useState<JiraIssue[]>([]);
-    const [users, setUsers] = useState<JiraUser[]>([]);
-    const [projects, setProjects] = useState<JiraProject[]>([]);
-    const [currentProject, setCurrentProject] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
     useEffect(() => {
-        initializeApp();
+        appDataStore.initialize();
     }, []);
-
-    const initializeApp = async (): Promise<void> => {
-        try {
-            await JiraAPI.initialize();
-            await loadProjects();
-            const currentProjectKey = JiraAPI.getCurrentProject();
-            setCurrentProject(currentProjectKey);
-            await loadData();
-        } catch (error) {
-            console.error('❌ Ошибка инициализации:', error);
-            setError(error instanceof Error ? error.message : 'Неизвестная ошибка');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadProjects = async (): Promise<void> => {
-        try {
-            const projectsResponse = await JiraAPI.getProjects();
-            if (projectsResponse.success && projectsResponse.data) {
-                setProjects(projectsResponse.data);
-            } else {
-                throw new Error(`Ошибка загрузки проектов: ${projectsResponse.error}`);
-            }
-        } catch (error) {
-            console.error('❌ Ошибка загрузки проектов:', error);
-            setError(error instanceof Error ? error.message : 'Ошибка загрузки проектов');
-        }
-    };
-
-    const loadData = async (): Promise<void> => {
-        try {
-            const [issuesResponse, usersResponse] = await Promise.all([
-                JiraAPI.getProjectIssues(),
-                JiraAPI.getProjectUsers()
-            ]);
-
-            if (issuesResponse.success && issuesResponse.data) {
-                setIssues(issuesResponse.data);
-            } else {
-                throw new Error(`Ошибка загрузки задач: ${issuesResponse.error}`);
-            }
-
-            if (usersResponse.success && usersResponse.data) {
-                setUsers(usersResponse.data);
-            } else {
-                throw new Error(`Ошибка загрузки пользователей: ${usersResponse.error}`);
-            }
-        } catch (error) {
-            console.error('❌ Ошибка загрузки данных:', error);
-            setError(error instanceof Error ? error.message : 'Ошибка загрузки данных');
-        }
-    };
 
     const handleAssignIssue = async (issueKey: string, accountId: string): Promise<void> => {
         try {
-            const response = await JiraAPI.updateIssueAssignee(issueKey, accountId);
-            if (response.success) {
-                await loadData();
-            } else {
-                throw new Error(response.error || 'Неизвестная ошибка');
-            }
+            await appDataStore.assignIssue(issueKey, accountId);
         } catch (error) {
-            console.error('❌ Ошибка назначения исполнителя:', error);
             alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
         }
     };
 
     const handleProjectChange = async (projectKey: string): Promise<void> => {
-        try {
-            setLoading(true);
-            JiraAPI.setCurrentProject(projectKey);
-            setCurrentProject(projectKey);
-            await loadData();
-        } catch (error) {
-            console.error('❌ Ошибка смены проекта:', error);
-            setError(error instanceof Error ? error.message : 'Ошибка смены проекта');
-        } finally {
-            setLoading(false);
-        }
+        await appDataStore.changeProject(projectKey);
     };
 
     const handleAutoAssign = async (): Promise<void> => {
         try {
-            const response = await JiraAPI.autoAssignUnassigned();
-            if (response.success) {
-                appUiStore.setShowAutoAssignConfirm(false);
-                await loadData();
-            } else {
-                throw new Error(response.error || 'Неизвестная ошибка');
-            }
+            await appDataStore.autoAssign();
+            appUiStore.setShowAutoAssignConfirm(false);
         } catch (error) {
-            console.error('❌ Ошибка массового назначения:', error);
             alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
             appUiStore.setShowAutoAssignConfirm(false);
         }
@@ -130,14 +44,8 @@ export const App: React.FC = observer(() => {
 
     const handleFixPriority = async (issueKey: string, priorityId: string = '3'): Promise<void> => {
         try {
-            const response = await JiraAPI.updateIssuePriority(issueKey, priorityId);
-            if (response.success) {
-                await loadData();
-            } else {
-                throw new Error(response.error || 'Неизвестная ошибка');
-            }
+            await appDataStore.updatePriority(issueKey, priorityId);
         } catch (error) {
-            console.error('❌ Ошибка повышения приоритета:', error);
             alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
         }
     };
@@ -178,7 +86,7 @@ export const App: React.FC = observer(() => {
         }
     };
 
-    if (loading) {
+    if (appDataStore.loading) {
         return (
             <Container maxWidth="md" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 8 }}>
                 <Typography variant="h4" gutterBottom>🚀 Jira Team Assistant</Typography>
@@ -190,13 +98,13 @@ export const App: React.FC = observer(() => {
         );
     }
 
-    if (error) {
+    if (appDataStore.error) {
         return (
             <Container maxWidth="md" sx={{ mt: 8 }}>
                 <Typography variant="h4" gutterBottom>🚀 Jira Team Assistant</Typography>
                 <Alert severity="error" sx={{ mb: 2 }}>
                     <Typography variant="h6" sx={{ mb: 1 }}>❌ Ошибка</Typography>
-                    <Typography>{error}</Typography>
+                    <Typography>{appDataStore.error}</Typography>
                 </Alert>
                 <Button variant="contained" color="primary" onClick={() => window.location.reload()}>
                     Перезагрузить
@@ -205,23 +113,12 @@ export const App: React.FC = observer(() => {
         );
     }
 
+    const issues = appDataStore.issues;
+    const users = appDataStore.users;
+    const projects = appDataStore.projects;
+    const currentProject = appDataStore.currentProject || '';
+
     const unassignedIssues = issues.filter(issue => !issue.assignee);
-    const problemIssues = issues.filter(issue =>
-        !issue.assignee ||
-        ((issue.priority.name === 'Low' || issue.priority.name === 'Lowest')
-            && issue.duedate && new Date(issue.duedate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
-    );
-
-    const getUserActivity = (user: JiraUser): boolean => {
-        const assignedCount = issues.filter(issue =>
-            issue.assignee && issue.assignee.accountId === user.accountId
-        ).length;
-        return assignedCount < 2;
-    };
-
-    const getActiveUsers = (): JiraUser[] => {
-        return users.filter(user => user.active && getUserActivity(user));
-    };
 
     return (
         <Container maxWidth="lg" sx={{ py: 2 }}>
@@ -237,13 +134,13 @@ export const App: React.FC = observer(() => {
                             issues={issues}
                             users={users}
                             projects={projects}
-                            currentProject={currentProject || ''}
+                            currentProject={currentProject}
                             onProjectChange={handleProjectChange}
-                            unassignedCount={unassignedIssues.length}
-                            problemCount={problemIssues.length}
+                            unassignedCount={appDataStore.unassignedCount}
+                            problemCount={appDataStore.problemCount}
                             onOpenAutoAssign={() => appUiStore.setShowAutoAssignConfirm(true)}
-                            canAutoAssign={getActiveUsers().length > 0}
-                            activeUsersCount={getActiveUsers().length}
+                            canAutoAssign={appDataStore.activeUsersCount > 0}
+                            activeUsersCount={appDataStore.activeUsersCount}
                         />
 
                         <IssuesTable
@@ -257,14 +154,14 @@ export const App: React.FC = observer(() => {
                     <TeamGrid
                         users={users}
                         issues={issues}
-                        getUserActivity={getUserActivity}
+                        getUserActivity={appDataStore.getUserActivity}
                     />
                 )}
 
                 <AssignModal
                     show={appUiStore.showAssignModal && !!appUiStore.selectedIssue}
                     issue={appUiStore.selectedIssue}
-                    users={getActiveUsers()}
+                    users={appDataStore.activeUsers}
                     issues={issues}
                     onAssign={handleAssignFromModal}
                     onClose={closeModals}
@@ -288,7 +185,7 @@ export const App: React.FC = observer(() => {
                 <AutoAssignConfirm
                     show={appUiStore.showAutoAssignConfirm}
                     unassignedIssues={unassignedIssues}
-                    activeUsersCount={getActiveUsers().length}
+                    activeUsersCount={appDataStore.activeUsersCount}
                     onConfirm={handleAutoAssign}
                     onClose={closeModals}
                 />
