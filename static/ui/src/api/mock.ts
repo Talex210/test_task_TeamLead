@@ -190,7 +190,7 @@ const mockUsers: JiraUser[] = [
         displayName: 'Дмитрий Новиков',
         emailAddress: 'dmitry@example.com',
         avatarUrl: 'https://via.placeholder.com/24',
-        active: false
+        active: true
     }
 ];
 
