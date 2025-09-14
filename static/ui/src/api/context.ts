@@ -8,10 +8,21 @@ declare global {
     }
 }
 
+// Определяем режим разработки
+const isDevMode = process.env.VITE_DEV_MODE === 'true' ||
+    process.env.NODE_ENV === 'development' ||
+    !window.location.hostname.includes('atlassian');
+
 let currentProjectKey: string | null = null;
 
 export const initializeContext = async (): Promise<string> => {
     try {
+        if (isDevMode) {
+            console.log('🔧 Dev Mode: используем mock контекст');
+            currentProjectKey = 'SCRUM';
+            return currentProjectKey;
+        }
+
         if (window.AP && window.AP.context) {
             const context = await new Promise<any>((resolve) => {
                 window.AP!.context.getContext((ctx: any) => {
